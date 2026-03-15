@@ -85,7 +85,7 @@ Working on this gave me a clearer picture of a few things I hadn't thought much 
 - **GB conversion standards** — I initially debated using 1024³ for the byte-to-GB conversion, but after researching industry standards for logging metrics, I learned that 10⁹ is the preferred decimal standard for this type of reporting.
 - **The 30–50 GB shard "sweet spot"** — I gained a better understanding of why this range matters in practice. It was interesting to see how a tool like this can surface both over-sharded indices and under-sharded ones — which mirrors the real world contexts when managing a clusters at scale.
 
-- **`timedelta` for date iteration** — I used Python's `timedelta` to step backwards through the last N days when querying the API, which was also new to me. One cool thing about timedelta is that is that it handles all the edge cases automatically — leap years, month boundaries, and year rollovers — so I didn't have to write any custom date math or worry about days-per-month logic.
+- **`timedelta` for date iteration** — I used Python's `timedelta` to step backwards through the last N days when querying the API, which was also new to me. One cool thing about timedelta is that it handles all the edge cases automatically — leap years, month boundaries, and year rollovers — so I didn't have to write any custom date math or worry about days-per-month logic.
 
 ---
 
