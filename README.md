@@ -57,7 +57,7 @@ python strava_index.py --debug
 
 ### 3. API Mode (Live Data)
 
-To fetch live data from your Elasticsearch cluster:
+To fetch live data from the API:
 
 ```bash
 python strava_index.py --endpoint <YOUR_API_URL> --days 7
