@@ -23,6 +23,9 @@ def aggregate_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     2. Converts string numbers from JSON into actual integers for math.
     3. Handles potential missing data/errors gracefully.
     """
+    # results take in index as key 
+    # values in resutls are the stats which is also a dictionaray 
+    # key: index name, value: dictionary containing stats for that index
     results = {}
     for record in records:
         raw_name = record.get("index", "")
@@ -40,22 +43,45 @@ def aggregate_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         try:
             size = int(record.get("pri.store.size", 0))
             shards = int(record.get("pri", 1))    
+            # converts if conversion fails like null value or value type,
+            # set size to 0 to to avoide interfering with other indices
+            # set shards to 1 to to avoide zero division later during ratio calculation
         except (ValueError, TypeError):
             size, shards = 0, 1
             
         if base_name not in results:
             results[base_name] = {"index": base_name, "size_bytes": size, "shards": shards}  
         else:
-            # Aggregate: sum the size across days, but keep the max shards
+            # Aggregate: sum the size across days because size is commulative, 
+            # but keep the max shards because shards are container units not commulative
             results[base_name]["size_bytes"] += size
             results[base_name]["shards"] = max(results[base_name]["shards"], shards)
-        
+        # why return list, because we can sort list by size or shards
+        # later but we cannot sort a dictionary that way
     return list(results.values())
 
 def get_data_from_file(file_path: str) -> List[Dict[str, Any]]:
     """Reads index data from a local JSON file."""
+    
+    #CHECK: Does the file actually exist?
+    if not p.exists():
+        print(f"ERROR: The file '{file_path}' was not found.")
+        sys.exit(1) # Exit gracefully rather than crashing with a Traceback
+
+    #  CHECK: Is the file empty? (0 bytes)
+    if p.stat().st_size == 0:
+        print(f"ERROR: The file '{file_path}' is empty.")
+        return [] # Return an empty list so the rest of the app doesn't crash
+    
+    # 1. Create a Path object from the string (e.g., "indexes.json")
+    # This object works across Windows/Mac/Linux automatically.
     p = Path(file_path)
+    
+    #  p.read_text() opens the file, reads the contents into a string, and closes it.
+    #  json.loads() takes that string from RAM and parses it into a Python List.
     raw_data = json.loads(p.read_text())
+    
+    # Pass the raw list into our aggregator to clean suffixes and sum sizes.
     return aggregate_records(raw_data)
 
 def get_data_from_server(endpoint: str, days: int) -> List[Dict[str, Any]]:
@@ -85,6 +111,19 @@ def print_largest_indexes(data: List[Dict[str, Any]]):
         gb = item["size_bytes"] / BYTES_IN_GB
         print(f"{i}. {item['index']}: {gb:.2f} GB")
     print()
+    
+def print_average(data: List[Dict[str, Any]]):
+    """Sorts and prints the top 5 indices by GB size."""
+    top = sorted(data, key=lambda x: x["size_bytes"], reverse=True)[:5]
+    print("--- Top 5 Average ---")
+    total_gb = 0.0
+    for i, item in enumerate(top, 1):
+        gb = item["size_bytes"] / BYTES_IN_GB
+        total_gb += gb
+    average = total_gb / 5 
+    print(average)
+    print()
+      
 
 def print_most_shards(data: List[Dict[str, Any]]):
     """Sorts and prints the top 5 indices by shard count."""
@@ -149,6 +188,13 @@ def main():
     print_largest_indexes(data)
     print_most_shards(data)
     print_least_balanced(data)
+    print_average(data)
 
 if __name__ == '__main__':
     main()
+    
+    
+
+#python strava_index.py --endpoint https://api.logs.strava.com --days 7
+
+#python strava_index.py --debug
